@@ -1,10 +1,10 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-st.set_page_config(page_title="7C 비행 슈팅 끝판왕", page_icon="✈️", layout="centered")
+st.set_page_config(page_title="추억의 오락실 비행기", page_icon="🕹️", layout="centered")
 
-st.title("🌍 7C 무한 슈팅: 리마스터 에디션")
-st.markdown("유치한 이모티콘은 가라! **실제 오락실 고해상도 그래픽**이 적용되었습니다. \n* ⚡**레이저:** 100% 모이면 자동 발사! \n* 💣**필살기:** 화면 빈 곳 더블 터치(따닥)!")
+st.title("🕹️ 추억의 오락실 비행기")
+st.markdown("외부 이미지 오류를 완벽히 해결한 **네온 벡터 그래픽** 버전입니다. \n* ⚡**레이저:** 에너지가 100% 모이면 자동 발사! \n* 💣**필살기:** 화면 빈 곳을 **더블 터치(따닥!)**")
 st.markdown("---")
 
 game_html = """
@@ -13,20 +13,19 @@ game_html = """
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
-  body { display: flex; flex-direction: column; align-items: center; background-color: #0d1117; color: white; margin: 0; padding: 10px; touch-action: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;}
-  canvas { border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 200, 255, 0.3); border: 2px solid #30363d; cursor: crosshair;}
+  body { display: flex; flex-direction: column; align-items: center; background-color: #0d1117; color: white; margin: 0; padding: 10px; touch-action: none; font-family: 'Segoe UI', Tahoma, sans-serif;}
+  canvas { border-radius: 12px; box-shadow: 0 0 25px rgba(0, 255, 255, 0.2); border: 2px solid #30363d; }
   
-  .status-bar { width: 350px; display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-bottom: 8px; text-shadow: 1px 1px 2px black;}
-  .energy-container { width: 350px; height: 16px; background: #21262d; border-radius: 8px; margin-bottom: 12px; border: 1px solid #484f58; position: relative; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);}
-  #energy-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00f2fe, #4facfe, #f093fb, #f5576c); transition: width 0.1s; }
+  .status-bar { width: 350px; display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+  .energy-container { width: 350px; height: 16px; background: #21262d; border-radius: 8px; margin-bottom: 12px; border: 1px solid #484f58; position: relative; overflow: hidden; }
+  #energy-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00f2fe, #f5576c); transition: width 0.1s; }
   #energy-text { position: absolute; top: -1px; left: 38%; font-size: 13px; font-weight: bold; text-shadow: 1px 1px 2px black;}
 
   .info-bar { width: 350px; display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #58a6ff;}
 
   #game-over-screen { position: absolute; top: 250px; text-align: center; display: none; width: 350px;}
-  #game-over-text { color: #ff7b72; font-size: 36px; font-weight: 900; text-shadow: 0 0 20px #ff7b72; margin-bottom: 25px; letter-spacing: 2px;}
-  #btn-restart { padding: 14px 28px; font-size: 20px; font-weight: bold; background: linear-gradient(180deg, #e34c26, #b1361e); color: white; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 15px rgba(227, 76, 38, 0.4); transition: transform 0.1s;}
-  #btn-restart:active { transform: scale(0.95); }
+  #game-over-text { color: #ff7b72; font-size: 36px; font-weight: 900; text-shadow: 0 0 20px red; margin-bottom: 25px;}
+  #btn-restart { padding: 14px 28px; font-size: 20px; font-weight: bold; background: #e34c26; color: white; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 15px rgba(227, 76, 38, 0.4); }
 </style>
 </head>
 <body>
@@ -38,7 +37,7 @@ game_html = """
   
   <div class="info-bar">
       <span id="stage-name">📍 지역: 우주 궤도</span>
-      <span id="bomb-ui">💣 폭탄: 2개 (더블터치)</span>
+      <span id="bomb-ui">💣 폭탄: 2개</span>
   </div>
 
   <div class="energy-container">
@@ -49,25 +48,18 @@ game_html = """
   <canvas id="gameCanvas" width="350" height="500"></canvas>
 
   <div id="game-over-screen">
-      <div id="game-over-text">MISSION FAILED</div>
+      <div id="game-over-text">GAME OVER</div>
       <button id="btn-restart" onclick="resetGame()">🚀 재도전</button>
   </div>
 
 <script>
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
-  
-  // 🎨 글로벌 게임 그래픽 직수입 (고해상도 이미지 로딩)
-  const imgPlayer = new Image(); imgPlayer.src = "https://raw.githubusercontent.com/kenneynl/Space-Shooter-Redux/master/PNG/playerShip1_blue.png";
-  const imgNormal = new Image(); imgNormal.src = "https://raw.githubusercontent.com/kenneynl/Space-Shooter-Redux/master/PNG/Enemies/enemyBlack2.png";
-  const imgBoss = new Image(); imgBoss.src = "https://raw.githubusercontent.com/kenneynl/Space-Shooter-Redux/master/PNG/Enemies/enemyRed5.png";
-  const imgMeteor = new Image(); imgMeteor.src = "https://raw.githubusercontent.com/kenneynl/Space-Shooter-Redux/master/PNG/Meteors/meteorBrown_big1.png";
-  const imgItem = new Image(); imgItem.src = "https://raw.githubusercontent.com/kenneynl/Space-Shooter-Redux/master/PNG/Power-ups/powerupYellow_star.png";
 
   let score = 0; let level = 1; let energy = 0; let bombs = 2; let weaponLevel = 1; let gameOver = false; let frameCount = 0;
   let isLaserActive = false; let laserTimer = 0;
 
-  const player = { x: 155, y: 400, width: 45, height: 35, invincible: 0 };
+  const player = { x: 155, y: 400, width: 40, height: 40, invincible: 0 };
   let bullets = []; let enemyBullets = []; let enemies = []; let items = []; let particles = []; let shockwaves = [];
   let backgroundStars = [];
 
@@ -87,6 +79,56 @@ game_html = """
       }
   }
   initBackground();
+
+  // 자체 그래픽 그리기 함수들 (오류 방지)
+  function drawPlayerShape(x, y, w, h) {
+      ctx.fillStyle = "#00FFFF";
+      ctx.shadowBlur = 10; ctx.shadowColor = "#00FFFF";
+      ctx.beginPath();
+      ctx.moveTo(x + w/2, y);
+      ctx.lineTo(x + w, y + h);
+      ctx.lineTo(x + w/2, y + h - 10);
+      ctx.lineTo(x, y + h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      
+      // 엔진 불꽃
+      ctx.fillStyle = (frameCount % 4 < 2) ? "#FF4500" : "#FFD700";
+      ctx.beginPath(); ctx.arc(x + w/2, y + h, Math.random()*4+4, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawEnemyNormal(x, y, w, h) {
+      ctx.fillStyle = "#FF4B4B";
+      ctx.beginPath();
+      ctx.moveTo(x + w/2, y + h);
+      ctx.lineTo(x + w, y);
+      ctx.lineTo(x, y);
+      ctx.closePath();
+      ctx.fill();
+  }
+
+  function drawEnemyBoss(x, y, w, h) {
+      ctx.fillStyle = "#FF00FF";
+      ctx.beginPath();
+      ctx.moveTo(x + w/2, y + h);
+      ctx.lineTo(x + w, y + h/2);
+      ctx.lineTo(x + w - 10, y);
+      ctx.lineTo(x + 10, y);
+      ctx.lineTo(x, y + h/2);
+      ctx.closePath();
+      ctx.fill();
+  }
+  
+  function drawItemStar(x, y) {
+      ctx.fillStyle = "#FFD700";
+      ctx.shadowBlur = 15; ctx.shadowColor = "yellow";
+      ctx.beginPath();
+      ctx.arc(x + 12, y + 12, 10, 0, Math.PI*2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "black"; ctx.font = "14px Arial"; ctx.fillText("S", x + 8, y + 17);
+  }
 
   function drawBackground() {
       let stg = stages[level - 1];
@@ -126,7 +168,7 @@ game_html = """
       if (bombs > 0 && !gameOver) {
           bombs--;
           document.getElementById("bomb-ui").innerText = "💣 폭탄: " + bombs + "개";
-          shockwaves.push({x: canvas.width/2, y: canvas.height/2, radius: 10, life: 30}); // 핵폭발 충격파
+          shockwaves.push({x: canvas.width/2, y: canvas.height/2, radius: 10, life: 30}); 
           
           for(let e of enemies) {
               createExplosion(e.x + 20, e.y + 20, "#FF4500", 25);
@@ -147,6 +189,7 @@ game_html = """
       }
   }
 
+  // 조작 (더블 터치 폭탄)
   let lastTap = 0;
   canvas.addEventListener('touchstart', function(e) {
       let currentTime = new Date().getTime();
@@ -154,7 +197,6 @@ game_html = """
       else { movePlayer(e.touches[0].clientX, e.touches[0].clientY, canvas.getBoundingClientRect()); }
       lastTap = currentTime;
   }, { passive: false });
-
   canvas.addEventListener('dblclick', function(e) { useBomb(); e.preventDefault(); });
 
   function createExplosion(x, y, color, count=15) {
@@ -176,7 +218,6 @@ game_html = """
           if (p.life <= 0) particles.splice(i, 1);
       }
       
-      // 필살기 충격파 그리기
       for(let i=shockwaves.length-1; i>=0; i--) {
           let sw = shockwaves[i];
           ctx.strokeStyle = `rgba(0, 255, 255, ${sw.life/30})`; ctx.lineWidth = 15;
@@ -184,19 +225,6 @@ game_html = """
           sw.radius += 25; sw.life--;
           if(sw.life <=0) shockwaves.splice(i,1);
       }
-  }
-
-  function drawPlayer() {
-      if (player.invincible > 0) {
-          player.invincible--;
-          if (frameCount % 6 < 3) return; 
-      }
-      // 엔진 부스터 화염
-      ctx.fillStyle = (frameCount % 4 < 2) ? "#00ffff" : "#0055ff";
-      ctx.beginPath(); ctx.arc(player.x + player.width/2, player.y + player.height + 5, Math.random()*6+4, 0, Math.PI*2); ctx.fill();
-      
-      // 비행기 진짜 이미지 출력
-      if(imgPlayer.complete) ctx.drawImage(imgPlayer, player.x, player.y, player.width, player.height);
   }
 
   function updateUI() {
@@ -249,9 +277,8 @@ game_html = """
       let spawnRate = Math.max(15, 45 - Math.floor(score / 5));
       if (frameCount % spawnRate === 0) {
           let r = Math.random();
-          if (r < 0.2) enemies.push({ x: Math.random()*(canvas.width-40), y: -50, img: imgMeteor, hp: 1, speed: 7, w: 40, h: 40, type: 'meteor' });
-          else if (r < 0.4) enemies.push({ x: Math.random()*(canvas.width-60), y: -60, img: imgBoss, hp: 6, speed: 2, w: 60, h: 60, type: 'boss' });
-          else enemies.push({ x: Math.random()*(canvas.width-40), y: -40, img: imgNormal, hp: 2, speed: 3.5, w: 40, h: 40, type: 'normal' });
+          if (r < 0.3) enemies.push({ x: Math.random()*(canvas.width-60), y: -60, hp: 6, speed: 2, w: 50, h: 40, type: 'boss' });
+          else enemies.push({ x: Math.random()*(canvas.width-40), y: -40, hp: 2, speed: 3.5, w: 30, h: 30, type: 'normal' });
       }
 
       for (let i = enemies.length - 1; i >= 0; i--) {
@@ -273,14 +300,11 @@ game_html = """
 
       ctx.fillStyle = "#ff4d4d";
       for (let i = enemyBullets.length - 1; i >= 0; i--) {
-          let eb = enemyBullets[i];
-          eb.y += eb.speed;
+          let eb = enemyBullets[i]; eb.y += eb.speed;
           ctx.shadowBlur = 10; ctx.shadowColor = "red";
           ctx.beginPath(); ctx.arc(eb.x, eb.y, 6, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
           
-          if (player.invincible <= 0 &&
-              eb.x > player.x && eb.x < player.x + player.width &&
-              eb.y > player.y && eb.y < player.y + player.height) {
+          if (player.invincible <= 0 && eb.x > player.x && eb.x < player.x + player.width && eb.y > player.y && eb.y < player.y + player.height) {
               createExplosion(player.x + 20, player.y + 20, "#FF0000", 40);
               gameOver = true;
           }
@@ -288,8 +312,7 @@ game_html = """
       }
 
       for (let i = items.length - 1; i >= 0; i--) {
-          let it = items[i];
-          it.y += 3.5;
+          let it = items[i]; it.y += 3.5;
           if (player.x < it.x + 25 && player.x + player.width > it.x && player.y < it.y + 25 && player.y + player.height > it.y) {
               items.splice(i, 1);
               if (weaponLevel < 3) weaponLevel++;
@@ -309,11 +332,9 @@ game_html = """
           if (hit) {
               if (enemies[i].hp <= 0) {
                   createExplosion(enemies[i].x + enemies[i].w/2, enemies[i].y + enemies[i].h/2, "#FFD700", 20);
-                  if (Math.random() < 0.1) items.push({ x: enemies[i].x + 10, y: enemies[i].y }); 
-                  
+                  if (Math.random() < 0.12) items.push({ x: enemies[i].x, y: enemies[i].y }); 
                   let gainedEnergy = (enemies[i].type === 'boss') ? 18 : 6;
                   addEnergy(gainedEnergy);
-                  
                   score += 1; enemies.splice(i, 1); updateUI();
               } else {
                   createExplosion(enemies[i].x + enemies[i].w/2, enemies[i].y + enemies[i].h/2, "white", 4); 
@@ -330,9 +351,12 @@ game_html = """
       update();
       drawParticles();
       
-      // 적, 아이템 그리기 (이미지)
-      for (let e of enemies) { if(e.img.complete) ctx.drawImage(e.img, e.x, e.y, e.w, e.h); }
-      for (let item of items) { if(imgItem.complete) ctx.drawImage(imgItem, item.x, item.y, 25, 25); }
+      // 적, 아이템 그리기
+      for (let e of enemies) {
+          if (e.type === 'normal') drawEnemyNormal(e.x, e.y, e.w, e.h);
+          else drawEnemyBoss(e.x, e.y, e.w, e.h);
+      }
+      for (let item of items) { drawItemStar(item.x, item.y); }
       
       for (let b of bullets) {
           ctx.shadowBlur = 15; ctx.shadowColor = b.color;
@@ -341,7 +365,10 @@ game_html = """
           ctx.shadowBlur = 0;
       }
       
-      drawPlayer();
+      if (player.invincible <= 0 || (frameCount % 6 < 3)) {
+          drawPlayerShape(player.x, player.y, player.width, player.height);
+      }
+      
       requestAnimationFrame(gameLoop);
   }
 
@@ -363,7 +390,7 @@ game_html = """
       score = 0; level = 1; energy = 0; bombs = 2; weaponLevel = 1; gameOver = false; frameCount = 0; isLaserActive = false;
       bullets = []; enemyBullets = []; enemies = []; items = []; particles = []; shockwaves = [];
       player.x = 155; player.y = 400; player.invincible = 0;
-      document.getElementById("bomb-ui").innerText = "💣 폭탄: 2개 (더블터치)";
+      document.getElementById("bomb-ui").innerText = "💣 폭탄: 2개";
       document.getElementById("stage-name").innerText = "📍 지역: 우주 궤도";
       document.getElementById("game-over-screen").style.display = "none";
       initBackground(); addEnergy(0); updateUI(); gameLoop();
