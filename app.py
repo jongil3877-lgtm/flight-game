@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="추억의 오락실 비행기", page_icon="🕹️", layout="centered")
 
 st.title("🕹️ 추억의 오락실 비행기: 랭킹전")
-st.markdown("무적 버그 해결! 이제 스치면 사망합니다. \n* ⚡**레이저:** 에너지가 100% 모이면 자동 발사! \n* 💣**필살기:** 화면 빈 곳을 **더블 터치(따닥!)**")
+st.markdown("상단에 **1위 최고기록(HI-SCORE)**이 표시됩니다! \n* ⚡**레이저:** 에너지가 100% 모이면 자동 발사! \n* 💣**필살기:** 화면 빈 곳을 **더블 터치(따닥!)**")
 st.markdown("---")
 
 game_html = """
@@ -16,13 +16,18 @@ game_html = """
   body { display: flex; flex-direction: column; align-items: center; background-color: #0d1117; color: white; margin: 0; padding: 10px; touch-action: none; font-family: 'Arial', sans-serif;}
   canvas { border-radius: 12px; box-shadow: 0 0 25px rgba(0, 255, 255, 0.2); border: 2px solid #30363d; cursor: crosshair;}
   
-  .status-bar { width: 350px; display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
+  /* 상단 상태바 디자인 (3칸으로 분할) */
+  .status-bar { width: 350px; display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; margin-bottom: 8px; }
+  .status-bar span { flex: 1; text-align: center; }
+  .status-bar span:first-child { text-align: left; }
+  .status-bar span:last-child { text-align: right; }
+
   .energy-container { width: 350px; height: 16px; background: #21262d; border-radius: 8px; margin-bottom: 12px; border: 1px solid #484f58; position: relative; overflow: hidden; }
   #energy-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00f2fe, #f5576c); transition: width 0.1s; }
   #energy-text { position: absolute; top: -1px; left: 38%; font-size: 13px; font-weight: bold; text-shadow: 1px 1px 2px black;}
   .info-bar { width: 350px; display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #58a6ff;}
 
-  #game-over-screen { position: absolute; top: 150px; text-align: center; display: none; width: 350px; background: rgba(0,0,0,0.9); padding: 20px; border-radius: 15px; box-sizing: border-box; border: 2px solid #ff7b72; box-shadow: 0 0 20px rgba(255,0,0,0.5);}
+  #game-over-screen { position: absolute; top: 150px; text-align: center; display: none; width: 350px; background: rgba(0,0,0,0.9); padding: 20px; border-radius: 15px; box-sizing: border-box; border: 2px solid #ff7b72; box-shadow: 0 0 20px rgba(255,0,0,0.5); z-index: 10;}
   #game-over-text { color: #ff7b72; font-size: 36px; font-weight: 900; text-shadow: 0 0 15px red; margin-bottom: 15px;}
   
   #new-record-input { display: none; margin-bottom: 15px; }
@@ -39,8 +44,9 @@ game_html = """
 <body>
   
   <div class="status-bar">
+      <span id="highscore" style="color: #FF1493; text-shadow: 1px 1px 2px black;">👑 최고: 0</span>
       <span id="score" style="color: #f2cc60;">🏆 점수: 0</span>
-      <span id="weapon" style="color: #79c0ff;">⚡무기: Lv.1</span>
+      <span id="weapon" style="color: #79c0ff;">⚡Lv.1</span>
   </div>
   
   <div class="info-bar">
@@ -93,8 +99,11 @@ game_html = """
       { min: 300, name: "사이버펑크", c1: "#0a0a2a", c2: "#3a0088", e: ["🤖", "⚙️", "👾"], b: "👁️‍🗨️" }
   ];
 
-  // ★ 기존 가짜 데이터를 버리고 텅 빈 진짜 랭킹 시스템으로 교체!
   let highScores = JSON.parse(localStorage.getItem('7c_real_ranking')) || [];
+  
+  // ★ 실시간 1위 점수 (HI-SCORE) 세팅
+  let currentHighScore = highScores.length > 0 ? highScores[0].score : 0;
+  document.getElementById("highscore").innerText = "👑 최고: " + currentHighScore;
 
   function checkCollision(x1, y1, r1, x2, y2, r2) {
       let dx = x1 - x2; let dy = y1 - y2;
@@ -144,10 +153,10 @@ game_html = """
 
   function useBomb() {
       if (bombs > 0 && !gameOver) {
-          bombs--; document.getElementById("bomb-ui").innerText = "💣 폭탄: " + bombs + "개";
+          bombs--; document.getElementById("bomb-ui").innerText = "💣 폭탄: " + bombs + "개 (따닥!)";
           shockwaves.push({x: canvas.width/2, y: canvas.height/2, radius: 10, life: 30}); 
           for(let e of enemies) { createExplosion(e.x, e.y, "#FF4500", 25); score += e.hp; }
-          enemies = []; enemyBullets = []; player.invincible = 60; // 1초 무적 부여
+          enemies = []; enemyBullets = []; player.invincible = 60;
           checkLevelUpdate(); updateUI();
       }
   }
@@ -156,11 +165,10 @@ game_html = """
       if (!gameOver && !isLaserActive) {
           energy = 0; document.getElementById("energy-bar").style.width = "0%";
           document.getElementById("energy-text").innerText = "⚠ 초고압 레이저 ⚠";
-          isLaserActive = true; laserTimer = 100; player.invincible = 100; // 레이저 발사 중 무적 부여
+          isLaserActive = true; laserTimer = 100; player.invincible = 100;
       }
   }
 
-  // 조작부
   let lastTap = 0;
   canvas.addEventListener('touchstart', function(e) {
       let currentTime = new Date().getTime();
@@ -179,21 +187,24 @@ game_html = """
   function updateUI() {
       document.getElementById("score").innerText = "🏆 점수: " + score;
       document.getElementById("weapon").innerText = "⚡Lv." + weaponLevel;
+      
+      // ★ 신기록 돌파 시 실시간 업데이트 효과
+      if (score > currentHighScore) {
+          currentHighScore = score;
+          document.getElementById("highscore").innerText = "👑 최고: " + currentHighScore;
+          document.getElementById("highscore").style.color = "#FFD700"; // 금색으로 번쩍임
+      }
   }
 
-  // ★ 랭킹 등록 시스템 로직 ★
   function handleGameOver() {
       gameOver = true;
       document.getElementById("game-over-screen").style.display = "block";
       
       let isTop5 = false;
       if (score > 0) {
-          // 순위표가 비어있거나 5명 미만이면 무조건 등록 가능!
           if (highScores.length < 5) {
               isTop5 = true;
-          } 
-          // 5명이 다 찼을 경우 꼴등 점수보다 높으면 등록 가능!
-          else if (score > highScores[highScores.length - 1].score) {
+          } else if (score > highScores[highScores.length - 1].score) {
               isTop5 = true;
           }
       }
@@ -201,7 +212,7 @@ game_html = """
       if (isTop5) {
           document.getElementById("new-record-input").style.display = "block";
           document.getElementById("leaderboard").style.display = "none";
-          document.getElementById("initials").value = ""; // 입력창 초기화
+          document.getElementById("initials").value = ""; 
       } else {
           document.getElementById("new-record-input").style.display = "none";
           showLeaderboard();
@@ -211,11 +222,13 @@ game_html = """
   function saveScore() {
       let initials = document.getElementById("initials").value.toUpperCase() || "UNK";
       highScores.push({name: initials.substring(0,3), score: score});
-      highScores.sort((a,b) => b.score - a.score); // 점수 높은 순 정렬
-      highScores = highScores.slice(0,5); // 딱 5명까지만 자르기
+      highScores.sort((a,b) => b.score - a.score); 
+      highScores = highScores.slice(0,5); 
       
-      // 내 스마트폰에 리얼 랭킹 저장!
       localStorage.setItem('7c_real_ranking', JSON.stringify(highScores));
+      
+      // 저장 후 최고기록 갱신
+      currentHighScore = highScores[0].score;
       
       document.getElementById("new-record-input").style.display = "none";
       showLeaderboard();
@@ -223,7 +236,7 @@ game_html = """
 
   function showLeaderboard() {
       let html = "";
-      let colors = ["#FFD700", "#C0C0C0", "#CD7F32", "white", "gray"]; // 1,2,3등 메달색깔
+      let colors = ["#FFD700", "#C0C0C0", "#CD7F32", "white", "gray"]; 
       
       if (highScores.length === 0) {
           html = "<p style='text-align:center; color:gray;'>아직 등록된 랭킹이 없습니다.</p>";
@@ -243,7 +256,6 @@ game_html = """
   function update() {
       frameCount++; checkLevelUpdate();
 
-      // ★ 불사신 버그 해결: 무적 시간이 알아서 닳아 없어지게 하는 마법의 코드 1줄 추가!
       if (player.invincible > 0) player.invincible--; 
 
       if (isLaserActive) {
@@ -297,7 +309,6 @@ game_html = """
               enemyBullets.push({ x: e.x, y: e.y, speed: 6, radius: 4 });
           }
 
-          // ★ 플레이어와 적 생물체의 충돌 검사
           if (player.invincible <= 0 && checkCollision(player.x, player.y, 10, e.x, e.y, e.radius - 5)) {
               createExplosion(player.x, player.y, "#FF0000", 40);
               handleGameOver();
@@ -311,7 +322,6 @@ game_html = """
           ctx.shadowBlur = 10; ctx.shadowColor = "red";
           ctx.beginPath(); ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
           
-          // ★ 플레이어와 적 미사일의 충돌 검사
           if (player.invincible <= 0 && checkCollision(player.x, player.y, 10, eb.x, eb.y, eb.radius)) {
               createExplosion(player.x, player.y, "#FF0000", 40);
               handleGameOver();
@@ -385,7 +395,6 @@ game_html = """
           ctx.ellipse(b.x, b.y, 3.5, 14, 0, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
       }
       
-      // 내 비행기 깜빡임(무적) 효과
       if (player.invincible <= 0 || (frameCount % 6 < 3)) {
           ctx.fillStyle = (frameCount % 4 < 2) ? "#FF4500" : "#FFD700";
           ctx.beginPath(); ctx.arc(player.x, player.y + 20, Math.random()*4+4, 0, Math.PI*2); ctx.fill();
@@ -418,7 +427,13 @@ game_html = """
       score = 0; level = 1; energy = 0; bombs = 2; weaponLevel = 1; gameOver = false; frameCount = 0; isLaserActive = false;
       bullets = []; enemyBullets = []; enemies = []; items = []; particles = []; shockwaves = [];
       player.x = 175; player.y = 400; player.invincible = 0;
-      document.getElementById("bomb-ui").innerText = "💣 폭탄: 2개";
+      
+      // 재시작 시점에도 현재 최고 기록 불러오기
+      currentHighScore = highScores.length > 0 ? highScores[0].score : 0;
+      document.getElementById("highscore").innerText = "👑 최고: " + currentHighScore;
+      document.getElementById("highscore").style.color = "#FF1493";
+
+      document.getElementById("bomb-ui").innerText = "💣 폭탄: 2개 (따닥!)";
       document.getElementById("stage-name").innerText = "📍 지역: 우주 궤도";
       document.getElementById("game-over-screen").style.display = "none";
       initBackground(); addEnergy(0); updateUI(); gameLoop();
