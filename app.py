@@ -3,8 +3,8 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="7C 비행 슈팅 끝판왕", page_icon="✈️", layout="centered")
 
-st.title("🌊 7C 슈팅: 바다의 지배자")
-st.markdown("점수가 **100점**을 넘으면 **바다 스테이지**로 진입합니다! 함대(🚢)가 미사일을 쏘니 주의하세요. \n* 💣**필살기:** 화면 전체 폭격! \n* ⚡**레이저:** 에너지가 100% 차면 버튼을 눌러 적을 쓸어버리세요!")
+st.title("🌍 7C 무한 슈팅: 월드 투어")
+st.markdown("점수에 따라 배경이 끝없이 진화합니다! \n* ⚡**레이저:** 에너지가 100% 모이면 **자동으로 발사**됩니다! \n* 💣**필살기:** 화면을 **'더블 터치(따닥!)'** 하면 폭탄이 터집니다!")
 st.markdown("---")
 
 game_html = """
@@ -14,20 +14,14 @@ game_html = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
   body { display: flex; flex-direction: column; align-items: center; background-color: #111; color: white; margin: 0; padding: 10px; touch-action: none; font-family: 'Arial', sans-serif;}
-  canvas { border-radius: 10px; box-shadow: 0 0 20px rgba(0, 150, 255, 0.5); border: 2px solid #555; }
+  canvas { border-radius: 10px; box-shadow: 0 0 20px rgba(255, 255, 255, 0.2); border: 2px solid #555; cursor: crosshair;}
   
   .status-bar { width: 350px; display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-bottom: 5px; }
-  .energy-container { width: 350px; height: 15px; background: #333; border-radius: 10px; margin-bottom: 10px; border: 1px solid #fff; position: relative;}
-  #energy-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00ffff, #ff00ff); border-radius: 10px; transition: width 0.2s; }
-  #energy-text { position: absolute; top: -2px; left: 45%; font-size: 12px; font-weight: bold; }
+  .energy-container { width: 350px; height: 18px; background: #333; border-radius: 10px; margin-bottom: 10px; border: 1px solid #fff; position: relative; overflow: hidden;}
+  #energy-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #00ffff, #ff00ff); transition: width 0.1s; }
+  #energy-text { position: absolute; top: 0px; left: 42%; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px black;}
 
-  .btn-group { display: flex; gap: 10px; width: 350px; margin-top: 15px; }
-  .skill-btn { flex: 1; padding: 15px 0; font-size: 18px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
-  #btn-bomb { background: #FF4500; color: white; }
-  #btn-laser { background: #555; color: white; } /* 비활성화 색상 */
-  #btn-laser.active { background: #00FFFF; color: black; box-shadow: 0 0 15px cyan; animation: blink 1s infinite;}
-  
-  @keyframes blink { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+  .info-bar { width: 350px; display: flex; justify-content: space-between; font-size: 16px; font-weight: bold; margin-bottom: 5px; color: #FFA500;}
 
   #game-over-screen { position: absolute; top: 250px; text-align: center; display: none; width: 350px;}
   #game-over-text { color: #FF4B4B; font-size: 32px; font-weight: bold; text-shadow: 0 0 15px red; margin-bottom: 20px;}
@@ -38,20 +32,20 @@ game_html = """
   
   <div class="status-bar">
       <span id="score" style="color: #FFD700;">점수: 0</span>
-      <span id="weapon" style="color: #00FFFF;">⚡무기: Lv.1</span>
+      <span id="weapon" style="color: #00FFFF;">⚡Lv.1</span>
   </div>
   
+  <div class="info-bar">
+      <span id="stage-name">🗺️ 지역: 우주</span>
+      <span id="bomb-ui">💣 폭탄: 2개 (더블터치)</span>
+  </div>
+
   <div class="energy-container">
       <div id="energy-bar"></div>
-      <span id="energy-text">0%</span>
+      <span id="energy-text">0% (자동발사)</span>
   </div>
 
   <canvas id="gameCanvas" width="350" height="480"></canvas>
-  
-  <div class="btn-group">
-      <button id="btn-bomb" class="skill-btn" onclick="useBomb()">💣 폭격 (<span id="bomb-count">2</span>)</button>
-      <button id="btn-laser" class="skill-btn" onclick="useLaser()">⚡ 레이저 발사!</button>
-  </div>
 
   <div id="game-over-screen">
       <div id="game-over-text">🔥 추락했습니다!</div>
@@ -63,14 +57,13 @@ game_html = """
   const ctx = canvas.getContext("2d");
   
   let score = 0;
-  let level = 1; // 1: 우주, 2: 바다
+  let level = 1; 
   let energy = 0;
   let bombs = 2;
   let weaponLevel = 1;
   let gameOver = false;
   let frameCount = 0;
   
-  // 레이저 관련
   let isLaserActive = false;
   let laserTimer = 0;
 
@@ -80,41 +73,71 @@ game_html = """
   let enemies = [];
   let items = [];
   let particles = [];
-  let backgroundItems = []; // 별 or 파도
+  let backgroundItems = []; 
 
-  // 배경 요소 초기화
+  const stages = [
+      { minScore: 0,   name: "우주", bgColor: "#000015", emojis: ["."] },
+      { minScore: 50,  name: "바다", bgColor: "#004466", emojis: ["〰️"] },
+      { minScore: 100, name: "사막", bgColor: "#d2b48c", emojis: ["🌵", "🐪"] },
+      { minScore: 150, name: "맨하튼", bgColor: "#2c3e50", emojis: ["🏢", "🏙️", "🏦"] },
+      { minScore: 200, name: "화산", bgColor: "#4a0e0e", emojis: ["🌋", "🔥"] },
+      { minScore: 300, name: "사이버펑크", bgColor: "#110022", emojis: ["✨", "💠", "⚡"] }
+  ];
+
   function initBackground() {
       backgroundItems = [];
-      for(let i=0; i<40; i++) {
+      let count = level === 1 ? 50 : 20; // 우주는 별이 많고, 나머진 적게
+      for(let i=0; i<count; i++) {
           backgroundItems.push({
               x: Math.random() * canvas.width, 
               y: Math.random() * canvas.height, 
               size: Math.random() * 2 + 1, 
-              speed: Math.random() * 3 + 1
+              speed: Math.random() * 2 + 1,
+              emoji: ""
           });
       }
   }
   initBackground();
 
   function drawBackground() {
-      if (level === 1) {
-          ctx.fillStyle = "#000015"; // 우주 배경
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+      let stageInfo = stages[level - 1];
+      ctx.fillStyle = stageInfo.bgColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      if (level === 1) { // 우주 그리기
           ctx.fillStyle = "white";
           for(let b of backgroundItems) {
               b.y += b.speed + (score/200);
-              if(b.y > canvas.height) { b.y = 0; b.x = Math.random()*canvas.width; }
+              if(b.y > canvas.height) { b.y = -10; b.x = Math.random()*canvas.width; }
               ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, Math.PI*2); ctx.fill();
           }
-      } else {
-          ctx.fillStyle = "#004466"; // 바다 배경
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.font = "20px Arial";
+      } else { // 다른 배경 그리기 (이모티콘)
+          ctx.font = "24px Arial";
           for(let b of backgroundItems) {
-              b.y += b.speed + 1;
-              if(b.y > canvas.height) { b.y = 0; b.x = Math.random()*canvas.width; }
-              ctx.fillText("〰️", b.x, b.y); // 물결
+              b.y += b.speed + (level * 0.5);
+              if(b.y > canvas.height) { 
+                  b.y = -30; 
+                  b.x = Math.random()*canvas.width; 
+                  b.emoji = stageInfo.emojis[Math.floor(Math.random() * stageInfo.emojis.length)];
+              }
+              if(!b.emoji) b.emoji = stageInfo.emojis[Math.floor(Math.random() * stageInfo.emojis.length)];
+              ctx.fillText(b.emoji, b.x, b.y);
           }
+      }
+  }
+
+  function checkLevelUpdate() {
+      let newLevel = 1;
+      for (let i = stages.length - 1; i >= 0; i--) {
+          if (score >= stages[i].minScore) {
+              newLevel = i + 1;
+              break;
+          }
+      }
+      if (newLevel !== level) {
+          level = newLevel;
+          document.getElementById("stage-name").innerText = "🗺️ 지역: " + stages[level - 1].name;
+          initBackground(); // 배경 재설정
       }
   }
 
@@ -123,7 +146,7 @@ game_html = """
       energy += amount;
       if (energy >= 100) {
           energy = 100;
-          document.getElementById("btn-laser").classList.add("active");
+          useLaser(); // ★ 100% 차면 자동 발사!!
       }
       document.getElementById("energy-bar").style.width = energy + "%";
       document.getElementById("energy-text").innerText = Math.floor(energy) + "%";
@@ -132,33 +155,54 @@ game_html = """
   function useBomb() {
       if (bombs > 0 && !gameOver) {
           bombs--;
-          document.getElementById("bomb-count").innerText = bombs;
-          // 화면 전체 적 파괴
+          document.getElementById("bomb-ui").innerText = "💣 폭탄: " + bombs + "개";
           for(let e of enemies) {
               createExplosion(e.x, e.y, "#FF4500", 30);
               score += e.hp;
           }
           enemies = [];
-          enemyBullets = []; // 적 총알도 소거
-          player.invincible = 60; // 1초 무적
+          enemyBullets = []; 
+          player.invincible = 60; 
           
-          // 화면 번쩍임 효과
           ctx.fillStyle = "white";
           ctx.fillRect(0,0,canvas.width,canvas.height);
+          checkLevelUpdate();
           updateUI();
       }
   }
 
   function useLaser() {
-      if (energy >= 100 && !gameOver && !isLaserActive) {
+      if (!gameOver && !isLaserActive) {
           energy = 0;
-          document.getElementById("btn-laser").classList.remove("active");
-          addEnergy(0); // UI 업데이트
+          document.getElementById("energy-bar").style.width = "0%";
+          document.getElementById("energy-text").innerText = "레이저 발사 중!";
           isLaserActive = true;
-          laserTimer = 90; // 약 1.5초간 레이저 발사
-          player.invincible = 90; // 레이저 쏘는 동안 무적
+          laserTimer = 100; // 약 1.5초
+          player.invincible = 100; 
       }
   }
+
+  // --- 더블 클릭 / 더블 터치 기능 추가 (폭탄 사용) ---
+  let lastTap = 0;
+  canvas.addEventListener('touchstart', function(e) {
+      let currentTime = new Date().getTime();
+      let tapLength = currentTime - lastTap;
+      if (tapLength < 300 && tapLength > 0) {
+          useBomb();
+          e.preventDefault();
+      } else {
+          // 싱글 터치일 경우 비행기 위치 이동
+          let rect = canvas.getBoundingClientRect();
+          movePlayer(e.touches[0].clientX, e.touches[0].clientY, rect);
+      }
+      lastTap = currentTime;
+  }, { passive: false });
+
+  canvas.addEventListener('dblclick', function(e) {
+      useBomb();
+      e.preventDefault();
+  });
+  // ----------------------------------------------------
 
   function createExplosion(x, y, color, count=15) {
       for(let i=0; i<count; i++) {
@@ -185,14 +229,12 @@ game_html = """
   function drawPlayer() {
       if (player.invincible > 0) {
           player.invincible--;
-          if (frameCount % 6 < 3) return; // 무적일 때 깜빡거림 효과
+          if (frameCount % 6 < 3) return; 
       }
       
-      // 엔진 불꽃
       ctx.fillStyle = (frameCount % 4 < 2) ? "#FF4500" : "#FFD700";
       ctx.beginPath(); ctx.arc(player.x + 20, player.y + 45, Math.random() * 8 + 5, 0, Math.PI*2); ctx.fill();
 
-      // 비행기 똑바로 세워서 그리기
       ctx.save();
       ctx.translate(player.x + 20, player.y + 20);
       ctx.rotate(-45 * Math.PI / 180);
@@ -203,28 +245,20 @@ game_html = """
 
   function updateUI() {
       document.getElementById("score").innerText = "점수: " + score;
-      document.getElementById("weapon").innerText = "⚡무기: Lv." + weaponLevel;
+      document.getElementById("weapon").innerText = "⚡Lv." + weaponLevel;
   }
 
   function update() {
       frameCount++;
-      
-      // 스테이지 전환 (100점 돌파 시 Бада로!)
-      if (score >= 100 && level === 1) {
-          level = 2;
-          initBackground();
-      }
+      checkLevelUpdate();
 
-      // ⚡ 레이저 빔 로직
       if (isLaserActive) {
           laserTimer--;
           ctx.fillStyle = "rgba(0, 255, 255, 0.8)";
           ctx.shadowBlur = 20; ctx.shadowColor = "cyan";
-          // 비행기 앞에서부터 화면 끝까지 거대한 사각형 빔
           ctx.fillRect(player.x - 10, 0, 60, player.y + 10);
           ctx.shadowBlur = 0;
 
-          // 레이저에 닿은 적 즉사
           for (let i = enemies.length - 1; i >= 0; i--) {
               if (enemies[i].x + 30 > player.x - 10 && enemies[i].x < player.x + 50) {
                   createExplosion(enemies[i].x, enemies[i].y, "#00FFFF");
@@ -236,7 +270,6 @@ game_html = """
           if (laserTimer <= 0) isLaserActive = false;
       }
 
-      // 🚀 기본 미사일 발사 (레이저 쏘는 중엔 중지)
       if (frameCount % 10 === 0 && !isLaserActive) { 
           if (weaponLevel === 1) {
               bullets.push({x: player.x + 20, y: player.y, color: '#FFD700', dx: 0});
@@ -255,34 +288,34 @@ game_html = """
           if (bullets[i].y < 0) bullets.splice(i, 1);
       }
 
-      // 👾 적군 출현
       let spawnRate = Math.max(12, 45 - Math.floor(score / 4));
       if (frameCount % spawnRate === 0) {
           let r = Math.random();
           if (level === 1) {
-              // 1스테이지 우주
               if (r < 0.2) enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "☄️", hp: 1, speed: 7, type: 'meteor' });
               else if (r < 0.4) enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "🛸", hp: 4, speed: 1.5, type: 'boss' });
               else enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "👾", hp: 1, speed: 3.5, type: 'normal' });
-          } else {
-              // 2스테이지 바다 (배 등장)
-              if (r < 0.3) enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "🚢", hp: 6, speed: 1, type: 'ship' }); // 튼튼한 배
+          } else if (level === 2) { // 바다
+              if (r < 0.3) enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "🚢", hp: 6, speed: 1, type: 'ship' }); 
               else if (r < 0.5) enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "🚁", hp: 2, speed: 4, type: 'normal' });
               else enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "🛩️", hp: 1, speed: 5, type: 'normal' });
+          } else if (level === 3) { // 사막
+              if (r < 0.3) enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "🦅", hp: 2, speed: 5, type: 'normal' }); 
+              else enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "🦂", hp: 3, speed: 3, type: 'normal' });
+          } else { // 4이상 공통 하드코어
+              if (r < 0.3) enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "🚀", hp: 8, speed: 2, type: 'boss' }); 
+              else enemies.push({ x: Math.random() * (canvas.width - 40), y: -40, emoji: "💀", hp: 4, speed: 4, type: 'normal' });
           }
       }
 
-      // 적 이동 및 공격
       for (let i = enemies.length - 1; i >= 0; i--) {
           let e = enemies[i];
-          e.y += e.speed + (score / 100);
+          e.y += e.speed + (score / 150);
           
-          // 배(🚢)나 보스(🛸)는 플레이어를 향해 총알을 쏩니다!
           if ((e.type === 'ship' || e.type === 'boss') && frameCount % 80 === 0 && e.y > 0) {
               enemyBullets.push({ x: e.x + 20, y: e.y + 30, speed: 5 });
           }
 
-          // 플레이어 충돌
           if (player.invincible <= 0 && 
               player.x + 10 < e.x + 30 && player.x + 30 > e.x &&
               player.y + 10 < e.y + 30 && player.y + 30 > e.y) {
@@ -292,7 +325,6 @@ game_html = """
           if (e.y > canvas.height) enemies.splice(i, 1);
       }
 
-      // 적의 총알 이동 및 충돌
       ctx.fillStyle = "red";
       for (let i = enemyBullets.length - 1; i >= 0; i--) {
           let eb = enemyBullets[i];
@@ -308,7 +340,6 @@ game_html = """
           if (eb.y > canvas.height) enemyBullets.splice(i, 1);
       }
 
-      // ⭐ 아이템 이동 및 획득
       for (let i = items.length - 1; i >= 0; i--) {
           items[i].y += 3;
           if (player.x < items[i].x + 25 && player.x + 35 > items[i].x &&
@@ -321,7 +352,6 @@ game_html = """
           if (items[i].y > canvas.height) items.splice(i, 1);
       }
 
-      // 💥 내 미사일이 적을 맞췄을 때
       for (let i = enemies.length - 1; i >= 0; i--) {
           let hit = false;
           for (let j = bullets.length - 1; j >= 0; j--) {
@@ -336,9 +366,8 @@ game_html = """
           if (hit) {
               if (enemies[i].hp <= 0) {
                   createExplosion(enemies[i].x, enemies[i].y, "#FFD700");
-                  if (Math.random() < 0.1) items.push({ x: enemies[i].x, y: enemies[i].y }); // 10% 아이템
+                  if (Math.random() < 0.1) items.push({ x: enemies[i].x, y: enemies[i].y }); 
                   
-                  // 에너지 충전 (배나 보스를 잡으면 더 많이 줌)
                   let gainedEnergy = (enemies[i].type === 'ship' || enemies[i].type === 'boss') ? 15 : 5;
                   addEnergy(gainedEnergy);
                   
@@ -346,7 +375,7 @@ game_html = """
                   enemies.splice(i, 1);
                   updateUI();
               } else {
-                  createExplosion(enemies[i].x, enemies[i].y, "white", 3); // 타격 파편
+                  createExplosion(enemies[i].x, enemies[i].y, "white", 3); 
               }
           }
       }
@@ -400,7 +429,8 @@ game_html = """
       score = 0; level = 1; energy = 0; bombs = 2; weaponLevel = 1; gameOver = false; frameCount = 0; isLaserActive = false;
       bullets = []; enemyBullets = []; enemies = []; items = []; particles = [];
       player.x = 155; player.y = 400; player.invincible = 0;
-      document.getElementById("bomb-count").innerText = bombs;
+      document.getElementById("bomb-ui").innerText = "💣 폭탄: " + bombs + "개 (더블터치)";
+      document.getElementById("stage-name").innerText = "🗺️ 지역: 우주";
       document.getElementById("game-over-screen").style.display = "none";
       initBackground();
       addEnergy(0);
