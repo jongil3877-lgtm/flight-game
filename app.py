@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 st.set_page_config(page_title="추억의 오락실 비행기", page_icon="🕹️", layout="centered")
 
 st.title("🕹️ 추억의 오락실 비행기: 랭킹전")
-st.markdown("스테이지마다 **새로운 생물체**가 등장합니다! \n* ⚡**레이저:** 에너지가 100% 모이면 자동 발사! \n* 💣**필살기:** 화면 빈 곳을 **더블 터치(따닥!)**")
+st.markdown("무적 버그 해결! 이제 스치면 사망합니다. \n* ⚡**레이저:** 에너지가 100% 모이면 자동 발사! \n* 💣**필살기:** 화면 빈 곳을 **더블 터치(따닥!)**")
 st.markdown("---")
 
 game_html = """
@@ -22,12 +22,11 @@ game_html = """
   #energy-text { position: absolute; top: -1px; left: 38%; font-size: 13px; font-weight: bold; text-shadow: 1px 1px 2px black;}
   .info-bar { width: 350px; display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin-bottom: 5px; color: #58a6ff;}
 
-  #game-over-screen { position: absolute; top: 150px; text-align: center; display: none; width: 350px; background: rgba(0,0,0,0.85); padding: 20px; border-radius: 15px; box-sizing: border-box; border: 2px solid #ff7b72;}
+  #game-over-screen { position: absolute; top: 150px; text-align: center; display: none; width: 350px; background: rgba(0,0,0,0.9); padding: 20px; border-radius: 15px; box-sizing: border-box; border: 2px solid #ff7b72; box-shadow: 0 0 20px rgba(255,0,0,0.5);}
   #game-over-text { color: #ff7b72; font-size: 36px; font-weight: 900; text-shadow: 0 0 15px red; margin-bottom: 15px;}
   
-  /* 랭킹 시스템 UI */
   #new-record-input { display: none; margin-bottom: 15px; }
-  #new-record-input input { width: 80px; font-size: 24px; text-align: center; text-transform: uppercase; font-weight: bold; margin: 10px; border-radius: 5px; border: 2px solid #FFD700; background: #222; color: white;}
+  #new-record-input input { width: 90px; font-size: 26px; text-align: center; text-transform: uppercase; font-weight: bold; margin: 10px; border-radius: 5px; border: 2px solid #FFD700; background: #222; color: white;}
   #new-record-input button { padding: 8px 15px; font-size: 18px; font-weight: bold; background: #FFD700; color: black; border: none; border-radius: 5px; cursor: pointer;}
   
   #leaderboard { display: none; margin-bottom: 20px; text-align: left; }
@@ -60,7 +59,8 @@ game_html = """
       <div id="game-over-text">GAME OVER</div>
       
       <div id="new-record-input">
-          <p style="color:#FFD700; margin:0; font-size:20px;">🎉 TOP 5 랭킹 진입! 🎉</p>
+          <p style="color:#FFD700; margin:0; font-size:22px; font-weight:bold;">🎉 랭킹 달성! 🎉</p>
+          <p style="color:white; margin:5px 0 0 0; font-size:14px;">이니셜 3자리를 새겨주세요</p>
           <input type="text" id="initials" maxlength="3" placeholder="AAA">
           <button onclick="saveScore()">등록</button>
       </div>
@@ -80,12 +80,10 @@ game_html = """
   let score = 0; let level = 1; let energy = 0; let bombs = 2; let weaponLevel = 1; let gameOver = false; let frameCount = 0;
   let isLaserActive = false; let laserTimer = 0;
 
-  // 비행기 및 충돌 시스템 (좌표를 정중앙으로 통일하여 완벽한 충돌 판정 구현)
   const player = { x: 175, y: 400, radius: 15, emoji: "✈️", invincible: 0 };
   let bullets = []; let enemyBullets = []; let enemies = []; let items = []; let particles = []; let shockwaves = [];
   let backgroundStars = [];
 
-  // 스테이지별 테마 생물체 세팅!
   const stages = [
       { min: 0,   name: "우주 궤도", c1: "#000015", c2: "#1a0b2e", e: ["👾", "👽", "☄️"], b: "🛸" },
       { min: 50,  name: "푸른 바다", c1: "#001f3f", c2: "#0074D9", e: ["🦑", "🐙", "🐡"], b: "🦈" },
@@ -95,19 +93,9 @@ game_html = """
       { min: 300, name: "사이버펑크", c1: "#0a0a2a", c2: "#3a0088", e: ["🤖", "⚙️", "👾"], b: "👁️‍🗨️" }
   ];
 
-  // 로컬 랭킹 데이터 불러오기 (기본값 세팅)
-  let highScores = JSON.parse(localStorage.getItem('7c_highscores')) || [];
-  if(highScores.length === 0) {
-      highScores = [
-          {name: "SJI", score: 300},
-          {name: "HKJ", score: 200},
-          {name: "GEM", score: 100},
-          {name: "AAA", score: 50},
-          {name: "BBB", score: 10}
-      ];
-  }
+  // ★ 기존 가짜 데이터를 버리고 텅 빈 진짜 랭킹 시스템으로 교체!
+  let highScores = JSON.parse(localStorage.getItem('7c_real_ranking')) || [];
 
-  // 수학적 충돌 판정 함수 (원형 충돌)
   function checkCollision(x1, y1, r1, x2, y2, r2) {
       let dx = x1 - x2; let dy = y1 - y2;
       return Math.sqrt(dx*dx + dy*dy) < (r1 + r2);
@@ -159,7 +147,7 @@ game_html = """
           bombs--; document.getElementById("bomb-ui").innerText = "💣 폭탄: " + bombs + "개";
           shockwaves.push({x: canvas.width/2, y: canvas.height/2, radius: 10, life: 30}); 
           for(let e of enemies) { createExplosion(e.x, e.y, "#FF4500", 25); score += e.hp; }
-          enemies = []; enemyBullets = []; player.invincible = 60;
+          enemies = []; enemyBullets = []; player.invincible = 60; // 1초 무적 부여
           checkLevelUpdate(); updateUI();
       }
   }
@@ -168,7 +156,7 @@ game_html = """
       if (!gameOver && !isLaserActive) {
           energy = 0; document.getElementById("energy-bar").style.width = "0%";
           document.getElementById("energy-text").innerText = "⚠ 초고압 레이저 ⚠";
-          isLaserActive = true; laserTimer = 100; player.invincible = 100;
+          isLaserActive = true; laserTimer = 100; player.invincible = 100; // 레이저 발사 중 무적 부여
       }
   }
 
@@ -193,16 +181,29 @@ game_html = """
       document.getElementById("weapon").innerText = "⚡Lv." + weaponLevel;
   }
 
-  // ★ 랭킹 시스템 로직 ★
+  // ★ 랭킹 등록 시스템 로직 ★
   function handleGameOver() {
       gameOver = true;
-      let lowestScore = highScores[4].score;
       document.getElementById("game-over-screen").style.display = "block";
       
-      if (score > lowestScore) {
+      let isTop5 = false;
+      if (score > 0) {
+          // 순위표가 비어있거나 5명 미만이면 무조건 등록 가능!
+          if (highScores.length < 5) {
+              isTop5 = true;
+          } 
+          // 5명이 다 찼을 경우 꼴등 점수보다 높으면 등록 가능!
+          else if (score > highScores[highScores.length - 1].score) {
+              isTop5 = true;
+          }
+      }
+
+      if (isTop5) {
           document.getElementById("new-record-input").style.display = "block";
           document.getElementById("leaderboard").style.display = "none";
+          document.getElementById("initials").value = ""; // 입력창 초기화
       } else {
+          document.getElementById("new-record-input").style.display = "none";
           showLeaderboard();
       }
   }
@@ -210,9 +211,11 @@ game_html = """
   function saveScore() {
       let initials = document.getElementById("initials").value.toUpperCase() || "UNK";
       highScores.push({name: initials.substring(0,3), score: score});
-      highScores.sort((a,b) => b.score - a.score);
-      highScores = highScores.slice(0,5); // TOP 5 유지
-      localStorage.setItem('7c_highscores', JSON.stringify(highScores));
+      highScores.sort((a,b) => b.score - a.score); // 점수 높은 순 정렬
+      highScores = highScores.slice(0,5); // 딱 5명까지만 자르기
+      
+      // 내 스마트폰에 리얼 랭킹 저장!
+      localStorage.setItem('7c_real_ranking', JSON.stringify(highScores));
       
       document.getElementById("new-record-input").style.display = "none";
       showLeaderboard();
@@ -220,19 +223,28 @@ game_html = """
 
   function showLeaderboard() {
       let html = "";
-      let colors = ["#FFD700", "#C0C0C0", "#CD7F32", "white", "gray"]; // 금은동
-      highScores.forEach((s, idx) => {
-          html += `<div class="rank-row" style="color:${colors[idx]};">
-                      <span>${idx+1}위. ${s.name}</span>
-                      <span>${s.score} 점</span>
-                   </div>`;
-      });
+      let colors = ["#FFD700", "#C0C0C0", "#CD7F32", "white", "gray"]; // 1,2,3등 메달색깔
+      
+      if (highScores.length === 0) {
+          html = "<p style='text-align:center; color:gray;'>아직 등록된 랭킹이 없습니다.</p>";
+      } else {
+          highScores.forEach((s, idx) => {
+              html += `<div class="rank-row" style="color:${colors[idx]};">
+                          <span>${idx+1}위. ${s.name}</span>
+                          <span>${s.score} 점</span>
+                       </div>`;
+          });
+      }
+      
       document.getElementById("leaderboard-list").innerHTML = html;
       document.getElementById("leaderboard").style.display = "block";
   }
 
   function update() {
       frameCount++; checkLevelUpdate();
+
+      // ★ 불사신 버그 해결: 무적 시간이 알아서 닳아 없어지게 하는 마법의 코드 1줄 추가!
+      if (player.invincible > 0) player.invincible--; 
 
       if (isLaserActive) {
           laserTimer--;
@@ -268,7 +280,6 @@ game_html = """
           if (bullets[i].y < 0) bullets.splice(i, 1);
       }
 
-      // 적 스폰 (테마에 맞는 이모티콘 소환)
       let spawnRate = Math.max(15, 45 - Math.floor(score / 5));
       if (frameCount % spawnRate === 0) {
           let stg = stages[level - 1];
@@ -286,8 +297,8 @@ game_html = """
               enemyBullets.push({ x: e.x, y: e.y, speed: 6, radius: 4 });
           }
 
-          // ★ 충돌 판정 완벽 수정 (원형 히트박스)
-          if (player.invincible <= 0 && checkCollision(player.x, player.y, player.radius - 5, e.x, e.y, e.radius - 5)) {
+          // ★ 플레이어와 적 생물체의 충돌 검사
+          if (player.invincible <= 0 && checkCollision(player.x, player.y, 10, e.x, e.y, e.radius - 5)) {
               createExplosion(player.x, player.y, "#FF0000", 40);
               handleGameOver();
           }
@@ -300,8 +311,8 @@ game_html = """
           ctx.shadowBlur = 10; ctx.shadowColor = "red";
           ctx.beginPath(); ctx.arc(eb.x, eb.y, eb.radius, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
           
-          // ★ 적 총알 충돌 판정 완벽 수정
-          if (player.invincible <= 0 && checkCollision(player.x, player.y, player.radius - 5, eb.x, eb.y, eb.radius)) {
+          // ★ 플레이어와 적 미사일의 충돌 검사
+          if (player.invincible <= 0 && checkCollision(player.x, player.y, 10, eb.x, eb.y, eb.radius)) {
               createExplosion(player.x, player.y, "#FF0000", 40);
               handleGameOver();
           }
@@ -321,7 +332,6 @@ game_html = """
       for (let i = enemies.length - 1; i >= 0; i--) {
           let hit = false;
           for (let j = bullets.length - 1; j >= 0; j--) {
-              // 미사일 vs 적군 충돌 판정
               if (checkCollision(bullets[j].x, bullets[j].y, 3, enemies[i].x, enemies[i].y, enemies[i].radius)) {
                   bullets.splice(j, 1); enemies[i].hp--; hit = true; break;
               }
@@ -340,13 +350,12 @@ game_html = """
   }
 
   function gameLoop() {
-      if (gameOver) return; // 멈춤
+      if (gameOver) return; 
       
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawBackground();
       update();
       
-      // 파티클 및 충격파 그리기
       for (let i = particles.length - 1; i >= 0; i--) {
           let p = particles[i];
           ctx.fillStyle = p.color; ctx.globalAlpha = p.life / 25;
@@ -362,7 +371,6 @@ game_html = """
       
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       
-      // 적, 아이템 이모티콘 그리기
       for (let e of enemies) {
           ctx.font = (e.radius * 2 - 10) + "px Arial";
           ctx.fillText(e.emoji, e.x, e.y);
@@ -371,16 +379,14 @@ game_html = """
           ctx.font = "25px Arial"; ctx.fillText("⭐", item.x, item.y);
       }
       
-      // 내 총알
       for (let b of bullets) {
           ctx.shadowBlur = 15; ctx.shadowColor = b.color;
           ctx.fillStyle = "white"; ctx.beginPath();
           ctx.ellipse(b.x, b.y, 3.5, 14, 0, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
       }
       
-      // ★ 플레이어 그리기 (중앙 기준 회전)
+      // 내 비행기 깜빡임(무적) 효과
       if (player.invincible <= 0 || (frameCount % 6 < 3)) {
-          // 불꽃
           ctx.fillStyle = (frameCount % 4 < 2) ? "#FF4500" : "#FFD700";
           ctx.beginPath(); ctx.arc(player.x, player.y + 20, Math.random()*4+4, 0, Math.PI*2); ctx.fill();
           
